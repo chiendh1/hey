@@ -6,7 +6,7 @@
  * @flow
  */
 
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import {
   SafeAreaView,
   KeyboardAvoidingView,
@@ -20,7 +20,7 @@ import {
   Button,
   TextInput,
   TouchableHighlight,
-    Animated
+  Animated,
 } from 'react-native';
 
 import {
@@ -32,7 +32,7 @@ import {
 } from 'react-native/Libraries/NewAppScreen';
 
 import Editor, {EU} from 'react-native-mentions-editor';
-
+import lcs from './lcs';
 import styles from './styles';
 
 const editorStyle = StyleSheet.create({
@@ -66,7 +66,7 @@ const editorStyle = StyleSheet.create({
     top: 0,
     paddingHorizontal: 20,
     paddingVertical: 5,
-    width: '100%',
+    // width: '100%',
   },
   formmatedText: {
     fontSize: 16,
@@ -85,11 +85,11 @@ const editorStyle = StyleSheet.create({
 });
 
 const users = [
-  {id: 1, name: 'Raza Dar', username: 'mrazadar', gender: 'male'},
-  {id: 3, name: 'Atif Rashid', username: 'atif.rashid', gender: 'male'},
-  {id: 4, name: 'Peter Pan', username: 'peter.pan', gender: 'male'},
-  {id: 5, name: 'John Doe', username: 'john.doe', gender: 'male'},
-  {id: 6, name: 'Meesha Shafi', username: 'meesha.shafi', gender: 'female'},
+  {id: 1, name: 'Raza Dar', username: 'mrazadar'},
+  {id: 3, name: 'Atif Rashid', username: 'atif.rashid'},
+  {id: 4, name: 'Peter Pan', username: 'peter.pan'},
+  {id: 5, name: 'John Doe', username: 'john.doe'},
+  {id: 6, name: 'Meesha Shafi', username: 'meesha.shafi'},
 ];
 
 const formatMentionNode = (txt, key) => (
@@ -124,50 +124,97 @@ const renderMessageList = messages => {
 };
 const App: () => React$Node = () => {
   const [messages, setMessages] = useState([]);
-  const [tagged, setTagged] = useState({});
+  const [tags, setTags] = useState([]);
   const [clearInput, setClearInput] = useState(false);
   const [showEditor, setShowEditor] = useState(true);
-  const [showMentions, setShowMentions] = useState(true);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [suggestionList, setSuggestionList] = useState([]);
   const [message, setMessage] = useState('');
   const [scrollRef, setScrollRef] = useState(null);
+  const [inputRef, setInputRef] = useState(null);
   const [rawText, setRawText] = useState('');
   const [formattedText, setFormattedText] = useState('');
+  // cursor selection before & after a change
+  const [selections, setSelections] = useState([]);
+  // show whether user is trying to tag someone
+  const [tracking, setTracking] = useState(null);
 
   const triggerSuggestionKey = '@';
 
   const editorHeight = 100;
+
+  useEffect(() => {
+    const [before, current] = selections;
+
+    // removal
+    if (current.end < before.end) {
+      const affectedTags = tags.filter(tag => {
+        return current.end < tag.offset < before.end;
+      });
+
+
+    }
+  }, [rawText]);
+
+  console.log(selections);
+
   return (
     <>
       <View style={styles.main}>
         <View>
-          <Button title="Reset" onPress={() => setMessages([])} />
+          <Button
+            title="Reset"
+            onPress={() => {
+              setMessages([]);
+              setTags([]);
+              setRawText('');
+              setFormattedText('');
+              setShowSuggestions(false);
+              setTracking(null);
+            }}
+          />
         </View>
         <KeyboardAvoidingView behavior="position">
           <View style={styles.container}>
-            {renderMessageList(messages)}
+            <Text>{rawText}</Text>
             <View style={styles.footer}>
               <View testID="main">
-                {showMentions && (
+                {showSuggestions && (
                   <Animated.View>
                     <FlatList
-                      style={{ maxHeight: 100 }}
-                      getItemCount={data => data.length}
-                      data={users}
-                      getItem={(data, index) => data[index]}
+                      style={{maxHeight: 100}}
+                      data={suggestionList}
                       keyExtractor={item => `suggestion-${item.id}`}
-                      renderItem={item => {
+                      renderItem={({index, item, separators}) => {
                         return (
                           <TouchableHighlight
                             onPress={() => {
-                              setTagged({
-                                ...tagged,
-                                [item.id]: {
-                                  text: item.name || item.username,
-                                },
-                              });
+                              const displayText = item.name || item.username;
+
+                              // remove trigger key from current text
+                              setRawText(
+                                rawText.substring(0, tracking.offset) +
+                                  displayText,
+                              );
+
+                              setTags(
+                                tags.concat({
+                                  id: item.id,
+                                  name: displayText,
+                                  offset: tracking.offset, // also count @
+                                  length: displayText.length, // also count @
+                                }),
+                              );
+
+                              setTracking(null);
+                              setShowSuggestions(false);
+
+                              inputRef.focus();
                             }}>
-                            <View style={{backgroundColor: 'white'}}>
-                              <Text>{item.title}</Text>
+                            <View style={{backgroundColor: 'yellow'}}>
+                              <Text>{`${item.id} - ${item.username} - ${
+                                item.name
+                              }`}</Text>
                             </View>
                           </TouchableHighlight>
                         );
@@ -184,32 +231,75 @@ const App: () => React$Node = () => {
                       if (scrollRef) {
                         scrollRef.scrollToEnd({animated: true});
                       }
-                    }}>
+                    }}
+                    keyboardShouldPersistTaps="always">
                     <View testID="editor" style={{height: editorHeight}}>
                       <View
                         testID="masked-input"
                         style={editorStyle.formmatedTextWrapper}>
-                        <Text style={editorStyle.formmatedText}>
+                        <Text style={{backgroundColor: 'cyan'}}>
                           {formattedText}
                         </Text>
                       </View>
                       <TextInput
+                        ref={inputRef => setInputRef(inputRef)}
                         style={editorStyle.input}
                         multiline
                         autoFocus
                         numberOfLines={100}
                         name={'message'}
                         value={rawText}
-                        onKeyPress={key => {
-                          if (key === triggerSuggestionKey) {
-                            if (!showMentions) {
-                              setShowMentions(true);
+                        onSelectionChange={({nativeEvent}) => {
+                          if (selections.length === 0) {
+                            return setSelections([null, nativeEvent.selection]);
+                          }
+
+                          return setSelections([
+                            selections.pop(),
+                            nativeEvent.selection,
+                          ]);
+                        }}
+                        onKeyPress={({nativeEvent}) => {
+                          if (nativeEvent.key === triggerSuggestionKey) {
+                            if (!tracking) {
+                              setTracking({
+                                offset: rawText.length,
+                              });
                             }
                           }
                         }}
                         onChangeText={text => {
-                          console.log(text);
                           setRawText(text);
+
+                          if (tracking) {
+                            // check if user input look like someone's user or username
+                            const keyword = text.substring(tracking.offset + 1);
+
+                            if (keyword) {
+                              const normalizedKeyword = keyword.toLowerCase();
+
+                              const suggestions = users.filter(user => {
+                                return (
+                                  (user.name &&
+                                    `${user.name}`
+                                      .toLowerCase()
+                                      .startsWith(normalizedKeyword)) ||
+                                  (user.username &&
+                                    `${user.username}`
+                                      .toLowerCase()
+                                      .startsWith(normalizedKeyword))
+                                );
+                              });
+
+                              // if can't find any matching users, probably they aren't trying to tag anyone, disable tracking
+                              if (suggestions.length > 0) {
+                                setSuggestionList(suggestions);
+                                setShowSuggestions(true);
+                              } else {
+                                setShowSuggestions(false);
+                              }
+                            }
+                          }
                         }}
                         scrollEnabled={false}
                       />
