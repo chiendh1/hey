@@ -32,8 +32,8 @@ import {
 } from 'react-native/Libraries/NewAppScreen';
 
 import Editor, {EU} from 'react-native-mentions-editor';
-import lcs from './lcs';
 import styles from './styles';
+import {updateTags} from './lib';
 
 const editorStyle = StyleSheet.create({
   container: {
@@ -125,15 +125,16 @@ const renderMessageList = messages => {
 const App: () => React$Node = () => {
   const [messages, setMessages] = useState([]);
   const [tags, setTags] = useState([]);
-  const [clearInput, setClearInput] = useState(false);
-  const [showEditor, setShowEditor] = useState(true);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [suggestionList, setSuggestionList] = useState([]);
+
   const [message, setMessage] = useState('');
   const [scrollRef, setScrollRef] = useState(null);
   const [inputRef, setInputRef] = useState(null);
   const [rawText, setRawText] = useState('');
   const [formattedText, setFormattedText] = useState('');
+
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [suggestionList, setSuggestionList] = useState([]);
+
   // cursor selection before & after a change
   const [selections, setSelections] = useState([]);
   // show whether user is trying to tag someone
@@ -144,16 +145,9 @@ const App: () => React$Node = () => {
   const editorHeight = 100;
 
   useEffect(() => {
-    const [before, current] = selections;
+    const updated = updateTags(tags, selections);
 
-    // removal
-    if (current.end < before.end) {
-      const affectedTags = tags.filter(tag => {
-        return current.end < tag.offset < before.end;
-      });
-
-
-    }
+    return setTags(updated);
   }, [rawText]);
 
   console.log(selections);
