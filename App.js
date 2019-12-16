@@ -31,7 +31,7 @@ import {
   ReloadInstructions,
 } from 'react-native/Libraries/NewAppScreen';
 
-import Editor, {EU} from 'react-native-mentions-editor';
+import Editor, {EU} from './Mentions';
 import styles from './styles';
 import {updateTags} from './lib';
 
@@ -85,11 +85,11 @@ const editorStyle = StyleSheet.create({
 });
 
 const users = [
-  {id: 1, name: 'Raza Dar', username: 'mrazadar'},
-  {id: 3, name: 'Atif Rashid', username: 'atif.rashid'},
-  {id: 4, name: 'Peter Pan', username: 'peter.pan'},
-  {id: 5, name: 'John Doe', username: 'john.doe'},
-  {id: 6, name: 'Meesha Shafi', username: 'meesha.shafi'},
+  {id: 1, name: 'Raza Dar', username: 'mrazadar', gender: 'male'},
+  {id: 3, name: 'Atif Rashid', username: 'atif.rashid', gender: 'male'},
+  {id: 4, name: 'Peter Pan', username: 'peter.pan', gender: 'male'},
+  {id: 5, name: 'John Doe', username: 'john.doe', gender: 'male'},
+  {id: 6, name: 'Meesha Shafi', username: 'meesha.shafi', gender: 'female'},
 ];
 
 const formatMentionNode = (txt, key) => (
@@ -125,6 +125,7 @@ const renderMessageList = messages => {
 const App: () => React$Node = () => {
   const [messages, setMessages] = useState([]);
   const [tags, setTags] = useState([]);
+  const [clearInput, setClearInput] = useState(false);
 
   const [message, setMessage] = useState('');
   const [scrollRef, setScrollRef] = useState(null);
@@ -153,169 +154,44 @@ const App: () => React$Node = () => {
   console.log(selections);
 
   return (
-    <>
-      <View style={styles.main}>
-        <View>
-          <Button
-            title="Reset"
-            onPress={() => {
-              setMessages([]);
-              setTags([]);
-              setRawText('');
-              setFormattedText('');
-              setShowSuggestions(false);
-              setTracking(null);
-            }}
-          />
-        </View>
-        <KeyboardAvoidingView behavior="position">
-          <View style={styles.container}>
-            <Text>{rawText}</Text>
-            <View style={styles.footer}>
-              <View testID="main">
-                {showSuggestions && (
-                  <Animated.View>
-                    <FlatList
-                      style={{maxHeight: 100}}
-                      data={suggestionList}
-                      keyExtractor={item => `suggestion-${item.id}`}
-                      renderItem={({index, item, separators}) => {
-                        return (
-                          <TouchableHighlight
-                            onPress={() => {
-                              const displayText = item.name || item.username;
-
-                              // remove trigger key from current text
-                              setRawText(
-                                rawText.substring(0, tracking.offset) +
-                                  displayText,
-                              );
-
-                              setTags(
-                                tags.concat({
-                                  id: item.id,
-                                  name: displayText,
-                                  offset: tracking.offset, // also count @
-                                  length: displayText.length, // also count @
-                                }),
-                              );
-
-                              setTracking(null);
-                              setShowSuggestions(false);
-
-                              inputRef.focus();
-                            }}>
-                            <View style={{backgroundColor: 'yellow'}}>
-                              <Text>{`${item.id} - ${item.username} - ${
-                                item.name
-                              }`}</Text>
-                            </View>
-                          </TouchableHighlight>
-                        );
-                      }}
-                    />
-                  </Animated.View>
-                )}
-                <View testID="without-mentions" style={editorStyle.container}>
-                  <ScrollView
-                    ref={scroll => {
-                      setScrollRef(scroll);
-                    }}
-                    onContentSizeChange={() => {
-                      if (scrollRef) {
-                        scrollRef.scrollToEnd({animated: true});
-                      }
-                    }}
-                    keyboardShouldPersistTaps="always">
-                    <View testID="editor" style={{height: editorHeight}}>
-                      <View
-                        testID="masked-input"
-                        style={editorStyle.formmatedTextWrapper}>
-                        <Text style={{backgroundColor: 'cyan'}}>
-                          {formattedText}
-                        </Text>
-                      </View>
-                      <TextInput
-                        ref={inputRef => setInputRef(inputRef)}
-                        style={editorStyle.input}
-                        multiline
-                        autoFocus
-                        numberOfLines={100}
-                        name={'message'}
-                        value={rawText}
-                        onSelectionChange={({nativeEvent}) => {
-                          if (selections.length === 0) {
-                            return setSelections([null, nativeEvent.selection]);
-                          }
-
-                          return setSelections([
-                            selections.pop(),
-                            nativeEvent.selection,
-                          ]);
-                        }}
-                        onKeyPress={({nativeEvent}) => {
-                          if (nativeEvent.key === triggerSuggestionKey) {
-                            if (!tracking) {
-                              setTracking({
-                                offset: rawText.length,
-                              });
-                            }
-                          }
-                        }}
-                        onChangeText={text => {
-                          setRawText(text);
-
-                          if (tracking) {
-                            // check if user input look like someone's user or username
-                            const keyword = text.substring(tracking.offset + 1);
-
-                            if (keyword) {
-                              const normalizedKeyword = keyword.toLowerCase();
-
-                              const suggestions = users.filter(user => {
-                                return (
-                                  (user.name &&
-                                    `${user.name}`
-                                      .toLowerCase()
-                                      .startsWith(normalizedKeyword)) ||
-                                  (user.username &&
-                                    `${user.username}`
-                                      .toLowerCase()
-                                      .startsWith(normalizedKeyword))
-                                );
-                              });
-
-                              // if can't find any matching users, probably they aren't trying to tag anyone, disable tracking
-                              if (suggestions.length > 0) {
-                                setSuggestionList(suggestions);
-                                setShowSuggestions(true);
-                              } else {
-                                setShowSuggestions(false);
-                              }
-                            }
-                          }
-                        }}
-                        scrollEnabled={false}
-                      />
-                    </View>
-                  </ScrollView>
-                </View>
-              </View>
-
-              <TouchableOpacity
-                style={styles.sendBtn}
-                onPress={() => {
-                  setMessages(messages.concat(message));
-                  setMessage('');
-                  setClearInput(true);
-                }}>
-                <Text style={styles.sendBtnText}>Send</Text>
-              </TouchableOpacity>
-            </View>
+    <View style={styles.main}>
+      <KeyboardAvoidingView behavior="position">
+        <View style={styles.container}>
+          <View style={styles.header}>
+            <Text style={styles.heading}>React-Native Mentions Package</Text>
+            <Text style={styles.sub}>Built by @mrazadar</Text>
           </View>
-        </KeyboardAvoidingView>
-      </View>
-    </>
+          <ScrollView style={styles.messageList}>
+            {renderMessageList(messages)}
+          </ScrollView>
+          <View style={styles.footer}>
+            <Editor
+              list={users}
+              clearInput={clearInput}
+              onChange={text => {
+                setMessage(text);
+                setClearInput(false);
+              }}
+              showEditor={true}
+              showMentions={showSuggestions}
+              onHideMentions={() => {
+                setShowSuggestions(false);
+              }}
+              placeholder="You can write here..."
+            />
+            <TouchableOpacity
+              style={styles.sendBtn}
+              onPress={() => {
+                setMessages(messages.concat(message));
+                setMessage('');
+                setClearInput(true);
+              }}>
+              <Text style={styles.sendBtnText}>Send</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </KeyboardAvoidingView>
+    </View>
   );
 };
 
