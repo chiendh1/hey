@@ -27,11 +27,21 @@ export class Editor extends React.Component {
     editorStyles: PropTypes.object,
     placeholder: PropTypes.string,
     renderMentionList: PropTypes.func,
+    transformMentionText: PropTypes.func,
   };
 
   constructor(props) {
     super(props);
     this.mentionsMap = new Map();
+
+    this.transformMentionText = user => {
+      return `${user.username}`;
+    };
+
+    if (props.transformMentionText) {
+      this.transformMentionText = props.transformMentionText;
+    }
+
     let msg = '';
     let formattedMsg = '';
     if (props.initialValue && props.initialValue !== '') {
@@ -232,7 +242,7 @@ export class Editor extends React.Component {
       adjMentIndexes,
     );
     mentionKeys.forEach(key => {
-      remStr = `@${this.mentionsMap.get(key).username} ${remStr}`;
+      remStr = `@${this.transformMentionText(this.mentionsMap.get(key))} ${remStr}`;
     });
     return {
       initialStr,
@@ -252,7 +262,7 @@ export class Editor extends React.Component {
       menIndex,
     );
 
-    const username = `@${user.username}`;
+    const username = `@${this.transformMentionText(user)}`;
     const text = `${initialStr}${username} ${remStr}`;
     //'@[__display__](__id__)' ///find this trigger parsing from react-mentions
 
@@ -326,7 +336,7 @@ export class Editor extends React.Component {
       lastIndex = end + 1;
       formattedText.push(initialStr);
       const formattedMention = this.formatMentionNode(
-        `@${men.username}`,
+        `@${this.transformMentionText(men)}`,
         `${start}-${men.id}-${end}`,
       );
       formattedText.push(formattedMention);
@@ -349,7 +359,7 @@ export class Editor extends React.Component {
         start === 1 ? '' : inputText.substring(lastIndex, start);
       lastIndex = end + 1;
       formattedText = formattedText.concat(initialStr);
-      formattedText = formattedText.concat(`@[${men.username}](id:${men.id})`);
+      formattedText = formattedText.concat(`@[${this.transformMentionText(men)}](id:${men.id})`);
       if (
         EU.isKeysAreSame(EU.getLastKeyInMap(this.mentionsMap), [start, end])
       ) {

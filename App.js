@@ -178,6 +178,7 @@ const App: () => React$Node = () => {
                 setShowSuggestions(false);
               }}
               placeholder="You can write here..."
+              transformMentionText={user => user.name || user.username}
             />
             <TouchableOpacity
               style={styles.sendBtn}
