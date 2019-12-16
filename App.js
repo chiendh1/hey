@@ -6,83 +6,18 @@
  * @flow
  */
 
-import React, {useState, useEffect} from 'react';
+import React, {useState} from 'react';
 import {
-  SafeAreaView,
-  KeyboardAvoidingView,
-  StyleSheet,
-  ScrollView,
-  View,
-  Text,
-  StatusBar,
   FlatList,
+  KeyboardAvoidingView,
+  ScrollView,
+  Text,
   TouchableOpacity,
-  Button,
-  TextInput,
-  TouchableHighlight,
-  Animated,
+  View,
 } from 'react-native';
-
-import {
-  Header,
-  LearnMoreLinks,
-  Colors,
-  DebugInstructions,
-  ReloadInstructions,
-} from 'react-native/Libraries/NewAppScreen';
 
 import Editor, {EU} from './Mentions';
 import styles from './styles';
-import {updateTags} from './lib';
-
-const editorStyle = StyleSheet.create({
-  container: {
-    backgroundColor: '#fff',
-    borderColor: 'green',
-    borderWidth: 1,
-    width: 300,
-  },
-  textContainer: {
-    alignSelf: 'stretch',
-    position: 'relative',
-    minHeight: 40,
-    maxHeight: 140,
-  },
-  input: {
-    fontSize: 16,
-    color: '#000',
-    fontWeight: '400',
-    paddingHorizontal: 20,
-    minHeight: 40,
-    position: 'absolute',
-    top: 0,
-    // color: 'transparent',
-    alignSelf: 'stretch',
-    width: '100%',
-  },
-  formmatedTextWrapper: {
-    minHeight: 40,
-    position: 'absolute',
-    top: 0,
-    paddingHorizontal: 20,
-    paddingVertical: 5,
-    // width: '100%',
-  },
-  formmatedText: {
-    fontSize: 16,
-    fontWeight: '400',
-  },
-  mention: {
-    fontSize: 16,
-    fontWeight: '400',
-    backgroundColor: 'rgba(36, 77, 201, 0.05)',
-    color: '#244dc9',
-  },
-  placeholderText: {
-    color: 'rgba(0, 0, 0, 0.1)',
-    fontSize: 16,
-  },
-});
 
 const users = [
   {id: 1, name: 'Raza Dar', username: 'mrazadar', gender: 'male'},
@@ -109,7 +44,7 @@ const renderMessageList = messages => {
       data={messages}
       keyExtractor={(message, index) => `${message.text}-${index}`}
       renderItem={rowData => {
-        const {item: message, index} = rowData;
+        const {item: message} = rowData;
 
         return (
           <View style={styles.messageListItem}>
@@ -124,34 +59,10 @@ const renderMessageList = messages => {
 };
 const App: () => React$Node = () => {
   const [messages, setMessages] = useState([]);
-  const [tags, setTags] = useState([]);
   const [clearInput, setClearInput] = useState(false);
 
   const [message, setMessage] = useState('');
-  const [scrollRef, setScrollRef] = useState(null);
-  const [inputRef, setInputRef] = useState(null);
-  const [rawText, setRawText] = useState('');
-  const [formattedText, setFormattedText] = useState('');
-
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [suggestionList, setSuggestionList] = useState([]);
-
-  // cursor selection before & after a change
-  const [selections, setSelections] = useState([]);
-  // show whether user is trying to tag someone
-  const [tracking, setTracking] = useState(null);
-
-  const triggerSuggestionKey = '@';
-
-  const editorHeight = 100;
-
-  useEffect(() => {
-    const updated = updateTags(tags, selections);
-
-    return setTags(updated);
-  }, [rawText]);
-
-  console.log(selections);
 
   return (
     <View style={styles.main}>
